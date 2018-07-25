@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+    xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.0.0"
+    xmlns:cxf="http://cxf.apache.org/blueprint/core"
+    xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="       http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd       http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd       http://cxf.apache.org/blueprint/core http://cxf.apache.org/schemas/blueprint/core.xsd">
+    <cm:property-placeholder id="myblueprint.placeholder" persistent-id="com.redhat.training.filepuller.cfg">
+        <!-- list some properties as needed -->
+        <cm:default-properties>
+            <cm:property name="context.name.environment" value="localhost"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+    <bean class="com.redhat.training.processor.IdempotentKeyProcessor" id="idempotentKeyComputeProcessor"/>
+    <camelContext id="orderContext" xmlns="http://camel.apache.org/schema/blueprint">
+        <!-- setup beanio data format -->
+        <dataFormats>
+            <beanio id="orderInputBeanio"
+                mapping="com/redhat/training/beanio/mapping.xml" streamName="OrderStream"/>
+        </dataFormats>
+        <!-- Read Files from shared store and push orders in the InputQueue -->
+        <route customId="true" id="SplitOrderFileRoute">
+            <from id="_from11" uri="file:{{order.files.path.source}}?readLock=idempotent&amp;readLockLoggingLevel=WARN&amp;idempotentRepository=#infinispanFileRepo"/>
+            <log id="_log1" message="INFO: File Received  - ${file:path}   last Modified time - $simple{date:file:yyyyMMdd-HHmmss}"/>
+            <log id="_log2" message="File received with content \n ${body} "/>
+            <split id="_split1">
+                <tokenize token="\n"/>
+                <log id="_log3" message="\n Order Item before \n= ${body}  ... idempotentKey=${header.yrkey}"/>
+                <process id="_process1" ref="idempotentKeyComputeProcessor"/>
+                <log id="_log4" message="\n Order Item after processor  ${body}  ... idempotentKey=${header.yrOrderIdempotentKey}"/>
+                <to id="_from1" uri="amqp:queue:{{activemq.name.queue.input}}"/>
+                <log id="_log5" message="\n"/>
+            </split>
+        </route>
+        <!-- Read Orders from Queue and process them -->
+        <route id="ProcessingOrderItemsRoute">
+            <!-- Check idempotent Consumer -->
+            <from id="_from2" uri="amqp:queue:{{activemq.name.queue.input}}"/>
+            <log id="_log6" message="\n Order Line Received  ${body}  idempotentKey=${header.yrOrderIdempotentKey}"/>
+            <idempotentConsumer id="_idempotentConsumer1" messageIdRepositoryRef="infinispanOrderItemsRepo">
+                <header>yrOrderIdempotentKey</header>
+                <log id="_log7" message="Processing order ${header.yrOrderIdempotentKey}    OK TO PROCESS"/>
+            </idempotentConsumer>
+            <to id="_to1" uri="amqp:queue:{{activemq.name.queue.output}}"/>
+        </route>
+    </camelContext>
+    <!-- Infinispan Configuration -->
+    
+    <bean class="com.redhat.training.cache.MyRemoteCacheManager" id="cacheManager">
+    	<argument value="${infinispan.hotrod.cluster}"/>
+    </bean>
+    
+    <bean
+        class="org.apache.camel.component.infinispan.processor.idempotent.InfinispanIdempotentRepository"
+        factory-method="infinispanIdempotentRepository" id="infinispanFileRepo">
+        <argument ref="cacheManager"/>
+        <argument value="${infinispan.file.cacheName}"/>
+    </bean>
+    <bean
+        class="org.apache.camel.component.infinispan.processor.idempotent.InfinispanIdempotentRepository"
+        factory-method="infinispanIdempotentRepository" id="infinispanOrderItemsRepo">
+        <argument ref="cacheManager"/>
+        <argument value="${infinispan.orders.cacheName}"/>
+    </bean>
+    <!-- AMQP Configuration -->
+    <bean class="org.apache.qpid.jms.JmsConnectionFactory" id="jmsConnectionFactory">
+        <property name="remoteURI" value="${brokerURL}"/>
+        <property name="username" value="${userName}"/>
+        <property name="password" value="${password}"/>
+    </bean>
+    <bean
+        class="org.springframework.jms.connection.CachingConnectionFactory" id="jmsCachingConnectionFactory">
+        <property name="targetConnectionFactory" ref="jmsConnectionFactory"/>
+    </bean>
+    <bean class="org.apache.camel.component.jms.JmsConfiguration" id="jmsConfig">
+        <property name="connectionFactory" ref="jmsCachingConnectionFactory"/>
+        <property name="cacheLevelName" value="CACHE_CONSUMER"/>
+    </bean>
+    <bean class="org.apache.camel.component.amqp.AMQPComponent" id="amqp">
+        <property name="configuration" ref="jmsConfig"/>
+    </bean>
+</blueprint>

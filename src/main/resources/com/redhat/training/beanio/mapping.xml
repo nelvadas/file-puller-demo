@@ -1,0 +1,25 @@
+<beanio xmlns="http://www.beanio.org/2012/03" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.beanio.org/2012/03 http://www.beanio.org/2012/03/mapping.xsd">
+
+  <stream name="OrderStream" format="csv">
+	<record name="order"  minOccurs="0" maxOccurs="unbounded" class="com.redhat.training.model.Order">
+        <field name="orderId" rid="true" />
+        <field name="orderDate"  format="dd/MM/yyyy hh:mm" />
+        <field name="amountHT" />
+        <field name="amountTTC" />
+        <segment name="customer"  minOccurs="1" maxOccurs="1" class="com.redhat.training.model.Customer">
+        <field name="id" />
+        <field name="firstName" />
+        <field name="lastName" />
+        <field name="birthdate" format="dd/MM/yyyy" />
+      </segment>
+      <segment name="address" minOccurs="1" maxOccurs="1" class="com.redhat.training.model.Address">
+        <field name="street" />
+        <field name="city" />
+        <field name="zipcode" />
+        <field name="country" />
+      </segment>
+     </record>     
+  </stream>  
+</beanio>
