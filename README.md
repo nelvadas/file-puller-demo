@@ -1,25 +1,38 @@
-file-puller-demo: Demonstrates clustered file puller in Fuse 6.3.X with infinispan idempotent repository
-========================================================================================================
-Author:  
+# file-puller-demo: Demonstrates clustered file puller in Fuse 6.3.X with infinispan idempotent repository
+
+
+
+
+# Table of contents
+1. [Introduction](#introduction)
+2. [System requirements and installations](#appsetup)
+    1. [Red Hat Fuse 6.3.X Fabric cluster](#fabric)
+    2. [Red Hat AMQ 7.x  Broker](#amq7)
+    3. [Red Hat Datagrid 7.x  ](#datagrid)
+       1. [Installation](#datagridinstall)
+       2. [Setup Cache configuration   ](#datagridconfig1)
+       3. [Setup Cache Instances   ](#datagridconfig2)
+3. [Camel Routes](#coding)
+4. [Deploying the bundle ](#deployment)
+5. [Running the application ](#tests)
+
+
+Author: elvadas Nono  
 Level: Intermediate  
 Technologies: Camel 2.17, Blueprint, AMQ 7 , Infinispan
 Summary: This tutorial demonstrates how to use Apache Camel, JBoss Datagrid to handle clustered file processing
 in a Fuse 6.X Fabric.
 
 
-Functional requirements
-----------------------
+
+# Introduction  <a name="introduction"></a>
 This tutorial simulated an environment where customer orders are handled.
 Orders are received as csv file in a shared folder.
 concurrent Apache Camel processes deployed in Fuse 6.X fabric will pull files as soon as their arrive in the share folder.
 each file should be handled once.
 
 
-
-
-System requirements
--------------------
-
+# System requirements and installations <a name="appsetup"></a>
 Before building and running this quick start you need:
 
 * Maven 3.x or higher
@@ -28,11 +41,9 @@ Before building and running this quick start you need:
 * Red Hat AMQ 7.2.0  Broker
 * Red Hat Datagrid 7.2.
 
-
-Installations
--------------
 To run the following tutorial you will have to set up the following
-* Red Hat Fuse 6.3.X Fabric cluster
+## Red Hat Fuse 6.3.X Fabric cluster <a name="fabric"></a>
+
 file puller component OSGI component will be deployed in the fabric cluster
 Create a simple fabric with the following instructions.
 
@@ -67,7 +78,7 @@ The following containers have been created successfully:
 JBossFuse:karaf@root>
 ```
 
-* Red Hat AMQ 7.x  Broker
+## Red Hat AMQ 7.x  Broker <a name="amq7"></a>
 AMQ7 will be use to store command data once read by file processor.
 To scale the ordrer processing, as soon as the file puller component read the order files,
 the file content is sent to an INPUT_QUEUE on the AMQ7 Broker.
@@ -97,14 +108,13 @@ $ ./artemis run
 ```
 
 
-* Red Hat Datagrid 7.x
+## Red Hat Datagrid 7.x <a name="datagrid"></a>
 In a production environment, we will setup a Replicated Datagrid cluster with at least two nodes,
 for the simplicity of this tutorial we will show the operation you have to complete for each node of your cluster.
 repeat the process to have a second node up and running.
 
 
-Start the firt JBoss Datagrid Node
-
+### Install <a name="datagridinstall"></a>
 ```
 $ unzip ~/Downloads/jboss-datagrid-7.2.0-server.zip
 cd  jboss-datagrid-7.2.0-server
@@ -141,7 +151,7 @@ The Node1 will expose the following interfaces
 * Admin console listening on http://127.0.0.1:10090
 
 
-
+### Setup Cache Configuration  <a name="datagridconfig1"></a>
 Connect to Node1 Admin CLI interface,
 
 ```
@@ -180,7 +190,9 @@ Define expiration delay for each cache configurations
 
 ```
 
-Create caches instances
+### Setup Cache Instances  <a name="datagridconfig2"></a>
+
+Create caches instances with the following commands
 
 ```
 [standalone@127.0.0.1:10090 /] /subsystem=datagrid-infinispan/cache-container=clustered/replicated-cache=CACHE_FP_01:add(configuration=CONFIG_FP_01)
@@ -194,8 +206,8 @@ Create caches instances
 Now we are ready to code and deploy our file puller application
 
 
-Configuration
--------------
+## Camel Routes  <a name="coding"></a>
+
 
 The camel route to read the files should rely on an idempotent repository
 ```
@@ -230,11 +242,11 @@ infinispan.orders.cacheName=CACHE_FP_02
 
 order.files.path.source=/opt/fuse1t/data/orders
 ```
-        
 
 
-Deploy the Bundle
---------------------
+
+## Deploying the Bundle   <a name="deployment"></a>
+
 
 To deploy the bundle in Fuse Fabric:
 
@@ -284,8 +296,8 @@ root*               1.0        karaf   yes          fabric                      
 ```
 
 
-Use the bundle
----------------------
+
+## Running the application  <a name="tests"></a>
 
 To use the application be sure to have deployed it in Fuse fabric as described above.
 
