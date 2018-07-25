@@ -1,6 +1,11 @@
 # file-puller-demo: Demonstrates clustered file puller in Fuse 6.3.X with infinispan idempotent repository
 
 
+Level: Intermediate  
+Technologies: Apache Camel 2.17, Blueprint, AMQ 7 , JBoss Datagrid, Fuse 6.X
+Summary: This tutorial demonstrates how to use Apache Camel, JBoss Datagrid to handle clustered file processing
+in a Fuse 6.X Fabric.
+
 
 
 # Table of contents
@@ -17,19 +22,15 @@
 5. [Running the application ](#tests)
 
 
-Author: elvadas Nono  
-Level: Intermediate  
-Technologies: Camel 2.17, Blueprint, AMQ 7 , Infinispan
-Summary: This tutorial demonstrates how to use Apache Camel, JBoss Datagrid to handle clustered file processing
-in a Fuse 6.X Fabric.
-
-
 
 # Introduction  <a name="introduction"></a>
 This tutorial simulated an environment where customer orders are handled.
 Orders are received as csv file in a shared folder.
 concurrent Apache Camel processes deployed in Fuse 6.X fabric will pull files as soon as their arrive in the share folder.
 each file should be handled once.
+
+
+![clusterfilepuller ](https://github.com/nelvadas/file-puller-demo/blob/master/filepullercluster.png "filepullerdemo ")
 
 
 # System requirements and installations <a name="appsetup"></a>
